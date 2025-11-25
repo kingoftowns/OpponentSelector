@@ -10,7 +10,7 @@ function App() {
   const [isSpinning, setIsSpinning] = useState(false)
   const [initialLoadComplete, setInitialLoadComplete] = useState(false)
   const [positionMode, setPositionMode] = useState(false)
-  const [visitedTeams, setVisitedTeams] = useState([])
+  const [sessionId, setSessionId] = useState(null)
   const [gameComplete, setGameComplete] = useState(false)
 
   // Parse URL parameters on initial load
@@ -40,8 +40,45 @@ function App() {
   useEffect(() => {
     if (initialLoadComplete) {
       fetchTeams(league)
+      // Try to restore session from localStorage
+      const savedSessionId = localStorage.getItem('sessionId')
+      if (savedSessionId) {
+        restoreSession(savedSessionId)
+      }
     }
   }, [league, initialLoadComplete])
+
+  const restoreSession = async (savedSessionId) => {
+    try {
+      const response = await fetch(`/api/session/${savedSessionId}`)
+      if (response.ok) {
+        const session = await response.json()
+        setSessionId(session.id)
+        setGameComplete(session.gameComplete)
+
+        // Only restore if it's the same league
+        if (session.league === league) {
+          // Find and set the current team
+          const response = await fetch(`/api/teams/${league}`)
+          const teams = await response.json()
+          const team = teams.find(t => t.id === session.currentTeam)
+          if (team) {
+            setCurrentTeam({ ...team, league })
+          }
+        } else {
+          // Different league, clear the session
+          localStorage.removeItem('sessionId')
+          setSessionId(null)
+        }
+      } else {
+        // Session not found, clear it
+        localStorage.removeItem('sessionId')
+      }
+    } catch (error) {
+      console.error('Error restoring session:', error)
+      localStorage.removeItem('sessionId')
+    }
+  }
 
   const fetchTeams = async (selectedLeague) => {
     try {
@@ -87,25 +124,27 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
+          sessionId: sessionId || '',
           currentTeam: currentTeam.id,
           league: league,
-          excludeTeams: visitedTeams,
         }),
       })
 
       const data = await response.json()
+
+      // Store session ID from backend
+      if (data.sessionId && !sessionId) {
+        setSessionId(data.sessionId)
+        localStorage.setItem('sessionId', data.sessionId)
+      }
 
       // Trigger animation with the calculated result
       setTimeout(() => {
         const newTeam = { ...data.targetTeam, league }
         setCurrentTeam(newTeam)
 
-        // Add the new team to visited teams
-        const newVisitedTeams = [...visitedTeams, data.targetTeam.id]
-        setVisitedTeams(newVisitedTeams)
-
-        // Check if game is complete (all teams except starting team have been visited)
-        if (newVisitedTeams.length >= teams.length - 1) {
+        // Update game complete state from backend
+        if (data.gameComplete) {
           setGameComplete(true)
         }
 
@@ -119,12 +158,15 @@ function App() {
     }
   }
 
-  const handleLeagueChange = (newLeague) => {
+  const handleLeagueChange = async (newLeague) => {
     if (isSpinning) return
     setLeague(newLeague)
     setCurrentTeam(null)
-    setVisitedTeams([])
     setGameComplete(false)
+
+    // Clear session when changing leagues
+    setSessionId(null)
+    localStorage.removeItem('sessionId')
   }
 
   const handleTeamSelect = (team) => {
@@ -133,12 +175,32 @@ function App() {
     }
   }
 
-  const handleNewGame = () => {
-    setVisitedTeams([])
+  const handleNewGame = async () => {
     setGameComplete(false)
-    // Reset to first team in the list
-    if (teams.length > 0) {
-      setCurrentTeam({ ...teams[0], league })
+
+    // Create new session on backend
+    try {
+      const response = await fetch('/api/session/new', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          league: league,
+          currentTeam: teams.length > 0 ? teams[0].id : '',
+        }),
+      })
+
+      const session = await response.json()
+      setSessionId(session.id)
+      localStorage.setItem('sessionId', session.id)
+
+      // Reset to first team in the list
+      if (teams.length > 0) {
+        setCurrentTeam({ ...teams[0], league })
+      }
+    } catch (error) {
+      console.error('Error creating new game:', error)
     }
   }
 

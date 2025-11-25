@@ -5,10 +5,12 @@ import (
 	"math"
 	"math/rand"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
 type Team struct {
@@ -20,17 +22,34 @@ type Team struct {
 	Division string  `json:"division"`
 }
 
+type GameSession struct {
+	ID           string    `json:"id"`
+	League       string    `json:"league"`
+	CurrentTeam  string    `json:"currentTeam"`
+	VisitedTeams []string  `json:"visitedTeams"`
+	GameComplete bool      `json:"gameComplete"`
+	CreatedAt    time.Time `json:"createdAt"`
+}
+
 type SpinRequest struct {
-	CurrentTeam string   `json:"currentTeam"`
-	League      string   `json:"league"`
-	ExcludeTeams []string `json:"excludeTeams"`
+	SessionID   string `json:"sessionId"`
+	CurrentTeam string `json:"currentTeam"`
+	League      string `json:"league"`
 }
 
 type SpinResponse struct {
-	TargetTeam Team    `json:"targetTeam"`
-	Angle      float64 `json:"angle"`
-	Duration   int     `json:"duration"`
+	SessionID    string `json:"sessionId"`
+	TargetTeam   Team   `json:"targetTeam"`
+	Angle        float64 `json:"angle"`
+	Duration     int     `json:"duration"`
+	GameComplete bool    `json:"gameComplete"`
 }
+
+// In-memory session storage
+var (
+	sessions      = make(map[string]*GameSession)
+	sessionsMutex sync.RWMutex
+)
 
 var mlbTeams = []Team{
 	{ID: "SEA", Name: "Mariners", City: "Seattle", X: 235.6, Y: 116.5, Division: "AL West"},
@@ -111,6 +130,8 @@ func main() {
 
 	router.GET("/api/teams/:league", getTeams)
 	router.POST("/api/spin", spin)
+	router.POST("/api/session/new", newSession)
+	router.GET("/api/session/:sessionId", getSession)
 	router.GET("/api/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "ok"})
 	})
@@ -145,6 +166,23 @@ func spin(c *gin.Context) {
 		return
 	}
 
+	// Get or create session
+	sessionsMutex.Lock()
+	session, exists := sessions[req.SessionID]
+	if !exists {
+		// Create new session
+		session = &GameSession{
+			ID:           uuid.New().String(),
+			League:       req.League,
+			CurrentTeam:  req.CurrentTeam,
+			VisitedTeams: []string{},
+			GameComplete: false,
+			CreatedAt:    time.Now(),
+		}
+		sessions[session.ID] = session
+	}
+	sessionsMutex.Unlock()
+
 	var teams []Team
 	switch req.League {
 	case "mlb":
@@ -156,12 +194,12 @@ func spin(c *gin.Context) {
 		return
 	}
 
-	// Filter out excluded teams
+	// Filter out visited teams
 	var availableTeams []Team
 	for _, team := range teams {
 		excluded := false
-		for _, excludedID := range req.ExcludeTeams {
-			if team.ID == excludedID {
+		for _, visitedID := range session.VisitedTeams {
+			if team.ID == visitedID {
 				excluded = true
 				break
 			}
@@ -281,11 +319,65 @@ func spin(c *gin.Context) {
 	// Duration in milliseconds (3-5 seconds) for a more dramatic spin
 	duration := 3000 + rand.Intn(2000)
 
+	// Update session with new visited team
+	sessionsMutex.Lock()
+	session.VisitedTeams = append(session.VisitedTeams, targetTeam.ID)
+	session.CurrentTeam = targetTeam.ID
+
+	// Check if game is complete (all teams except starting team visited)
+	gameComplete := len(session.VisitedTeams) >= len(teams)-1
+	session.GameComplete = gameComplete
+	sessionsMutex.Unlock()
+
 	response := SpinResponse{
-		TargetTeam: targetTeam,
-		Angle:      totalAngle,
-		Duration:   duration,
+		SessionID:    session.ID,
+		TargetTeam:   targetTeam,
+		Angle:        totalAngle,
+		Duration:     duration,
+		GameComplete: gameComplete,
 	}
 
 	c.JSON(http.StatusOK, response)
+}
+
+func newSession(c *gin.Context) {
+	var req struct {
+		League      string `json:"league"`
+		CurrentTeam string `json:"currentTeam"`
+	}
+
+	if err := c.BindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	session := &GameSession{
+		ID:           uuid.New().String(),
+		League:       req.League,
+		CurrentTeam:  req.CurrentTeam,
+		VisitedTeams: []string{},
+		GameComplete: false,
+		CreatedAt:    time.Now(),
+	}
+
+	sessionsMutex.Lock()
+	sessions[session.ID] = session
+	sessionsMutex.Unlock()
+
+	c.JSON(http.StatusOK, session)
+}
+
+func getSession(c *gin.Context) {
+	sessionID := c.Param("sessionId")
+
+	sessionsMutex.RLock()
+	session, exists := sessions[sessionID]
+	sessionsMutex.RUnlock()
+
+	if !exists {
+		c.JSON(http.StatusNotFound, gin.H{"error": "Session not found"})
+		return
+	}
+
+	c.JSON(http.StatusOK, session)
 }
