@@ -17,13 +17,6 @@ const USMap = ({ teams, currentTeam, onTeamSelect, onSpin, isSpinning }) => {
     }
   }, [currentTeam])
 
-  // Calculate angle between two points
-  const calculateAngle = (x1, y1, x2, y2) => {
-    const dx = x2 - x1
-    const dy = y2 - y1
-    return (Math.atan2(dy, dx) * 180) / Math.PI
-  }
-
   useEffect(() => {
     const handleResize = () => {
       if (svgRef.current) {
@@ -56,21 +49,12 @@ const USMap = ({ teams, currentTeam, onTeamSelect, onSpin, isSpinning }) => {
     if (data) {
       setSpinData(data)
 
-      // Animate the spinning arrow around the current team
-      const currentPoint = { x: currentTeam.x, y: currentTeam.y }
-      const targetPoint = { x: data.targetTeam.x, y: data.targetTeam.y }
-      const finalAngle = calculateAngle(currentPoint.x, currentPoint.y, targetPoint.x, targetPoint.y)
-
+      // Backend has already calculated the final angle to point at the target team
+      // data.angle includes full rotations + the final angle to the target
       if (spinningArrowRef.current) {
-        spinningArrowRef.current.style.transition = `transform ${data.duration}ms cubic-bezier(0.25, 0.1, 0.25, 1)`
-        spinningArrowRef.current.style.transform = `rotate(${data.angle + finalAngle}deg)`
-
-        setTimeout(() => {
-          if (spinningArrowRef.current) {
-            spinningArrowRef.current.style.transition = 'none'
-            spinningArrowRef.current.style.transform = `rotate(${finalAngle}deg)`
-          }
-        }, data.duration)
+        // Use ease-out cubic for a fast start and slow, dramatic finish
+        spinningArrowRef.current.style.transition = `transform ${data.duration}ms cubic-bezier(0.33, 1, 0.68, 1)`
+        spinningArrowRef.current.style.transform = `rotate(${data.angle}deg)`
       }
 
       // Also point the static arrow to the target

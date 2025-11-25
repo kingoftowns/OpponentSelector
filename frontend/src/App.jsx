@@ -10,6 +10,8 @@ function App() {
   const [isSpinning, setIsSpinning] = useState(false)
   const [initialLoadComplete, setInitialLoadComplete] = useState(false)
   const [positionMode, setPositionMode] = useState(false)
+  const [visitedTeams, setVisitedTeams] = useState([])
+  const [gameComplete, setGameComplete] = useState(false)
 
   // Parse URL parameters on initial load
   useEffect(() => {
@@ -74,7 +76,7 @@ function App() {
   }
 
   const handleSpin = async () => {
-    if (isSpinning || !currentTeam) return
+    if (isSpinning || !currentTeam || gameComplete) return
 
     setIsSpinning(true)
 
@@ -87,7 +89,7 @@ function App() {
         body: JSON.stringify({
           currentTeam: currentTeam.id,
           league: league,
-          excludeTeams: [],
+          excludeTeams: visitedTeams,
         }),
       })
 
@@ -95,7 +97,18 @@ function App() {
 
       // Trigger animation with the calculated result
       setTimeout(() => {
-        setCurrentTeam({ ...data.targetTeam, league })
+        const newTeam = { ...data.targetTeam, league }
+        setCurrentTeam(newTeam)
+
+        // Add the new team to visited teams
+        const newVisitedTeams = [...visitedTeams, data.targetTeam.id]
+        setVisitedTeams(newVisitedTeams)
+
+        // Check if game is complete (all teams except starting team have been visited)
+        if (newVisitedTeams.length >= teams.length - 1) {
+          setGameComplete(true)
+        }
+
         setIsSpinning(false)
       }, data.duration)
 
@@ -110,11 +123,22 @@ function App() {
     if (isSpinning) return
     setLeague(newLeague)
     setCurrentTeam(null)
+    setVisitedTeams([])
+    setGameComplete(false)
   }
 
   const handleTeamSelect = (team) => {
     if (!isSpinning) {
       setCurrentTeam({ ...team, league })
+    }
+  }
+
+  const handleNewGame = () => {
+    setVisitedTeams([])
+    setGameComplete(false)
+    // Reset to first team in the list
+    if (teams.length > 0) {
+      setCurrentTeam({ ...teams[0], league })
     }
   }
 
@@ -150,6 +174,10 @@ function App() {
   return (
     <div className="app">
       <div className="header">
+        <button className="new-game-button" onClick={handleNewGame}>
+          New Game
+        </button>
+
         <div className="league-toggle">
           <button
             className={league === 'mlb' ? 'active' : ''}
@@ -175,6 +203,18 @@ function App() {
       </div>
 
       <div className="map-container">
+        {gameComplete && (
+          <div className="game-complete-overlay">
+            <div className="game-complete-message">
+              <h1>🎉 Game Complete! 🎉</h1>
+              <p>You've visited all {teams.length} teams!</p>
+              <button onClick={handleNewGame} className="play-again-button">
+                Play Again
+              </button>
+            </div>
+          </div>
+        )}
+
         <USMap
           teams={teams}
           currentTeam={currentTeam}

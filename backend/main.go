@@ -263,12 +263,23 @@ func spin(c *gin.Context) {
 		}
 	}
 
-	// Calculate a random number of full rotations (3-5) plus the final angle
-	fullRotations := float64(3 + rand.Intn(3))
-	totalAngle := (fullRotations * 360.0) + randomAngle
+	// Calculate the actual angle to the target team
+	dx := targetTeam.X - currentTeam.X
+	dy := targetTeam.Y - currentTeam.Y
+	finalAngleRad := math.Atan2(dy, dx)
+	finalAngleDeg := finalAngleRad * 180.0 / math.Pi
 
-	// Duration in milliseconds (2-4 seconds)
-	duration := 2000 + rand.Intn(2000)
+	// Normalize to 0-360
+	if finalAngleDeg < 0 {
+		finalAngleDeg += 360.0
+	}
+
+	// Calculate a random number of full rotations (5-8) plus the final angle for more excitement
+	fullRotations := float64(5 + rand.Intn(4))
+	totalAngle := (fullRotations * 360.0) + finalAngleDeg
+
+	// Duration in milliseconds (3-5 seconds) for a more dramatic spin
+	duration := 3000 + rand.Intn(2000)
 
 	response := SpinResponse{
 		TargetTeam: targetTeam,
