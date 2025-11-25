@@ -52,8 +52,17 @@ const USMap = ({ teams, currentTeam, onTeamSelect, onSpin, isSpinning }) => {
       // Backend has already calculated the final angle to point at the target team
       // data.angle includes full rotations + the final angle to the target
       if (spinningArrowRef.current) {
-        // Use ease-out cubic for a fast start and slow, dramatic finish
-        spinningArrowRef.current.style.transition = `transform ${data.duration}ms cubic-bezier(0.33, 1, 0.68, 1)`
+        // Reset rotation to 0 without transition
+        spinningArrowRef.current.style.transition = 'none'
+        spinningArrowRef.current.style.transform = 'rotate(0deg)'
+
+        // Force a reflow to apply the reset
+        spinningArrowRef.current.offsetHeight
+
+        // Now animate to the target angle
+        // Use a custom easing for fast spins that slow down dramatically at the end
+        // cubic-bezier(0.17, 0.67, 0.16, 1) creates a fast start with sharp deceleration
+        spinningArrowRef.current.style.transition = `transform ${data.duration}ms cubic-bezier(0.17, 0.67, 0.16, 1)`
         spinningArrowRef.current.style.transform = `rotate(${data.angle}deg)`
       }
 

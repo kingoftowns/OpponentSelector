@@ -169,13 +169,13 @@ func spin(c *gin.Context) {
 	// Get or create session
 	sessionsMutex.Lock()
 	session, exists := sessions[req.SessionID]
-	if !exists {
-		// Create new session
+	if !exists || req.SessionID == "" {
+		// Create new session - mark the starting team as already visited
 		session = &GameSession{
 			ID:           uuid.New().String(),
 			League:       req.League,
 			CurrentTeam:  req.CurrentTeam,
-			VisitedTeams: []string{},
+			VisitedTeams: []string{req.CurrentTeam}, // Starting team should not be selected again
 			GameComplete: false,
 			CreatedAt:    time.Now(),
 		}
@@ -355,7 +355,7 @@ func newSession(c *gin.Context) {
 		ID:           uuid.New().String(),
 		League:       req.League,
 		CurrentTeam:  req.CurrentTeam,
-		VisitedTeams: []string{},
+		VisitedTeams: []string{req.CurrentTeam}, // Mark starting team as visited
 		GameComplete: false,
 		CreatedAt:    time.Now(),
 	}
