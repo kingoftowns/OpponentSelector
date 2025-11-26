@@ -38,8 +38,8 @@ type SpinRequest struct {
 }
 
 type SpinResponse struct {
-	SessionID    string `json:"sessionId"`
-	TargetTeam   Team   `json:"targetTeam"`
+	SessionID    string  `json:"sessionId"`
+	TargetTeam   Team    `json:"targetTeam"`
 	Angle        float64 `json:"angle"`
 	Duration     int     `json:"duration"`
 	GameComplete bool    `json:"gameComplete"`
@@ -60,7 +60,7 @@ var mlbTeams = []Team{
 	{ID: "SD", Name: "Padres", City: "San Diego", X: 201.3, Y: 462.1, Division: "NL West"},
 	{ID: "COL", Name: "Rockies", City: "Denver", X: 420.2, Y: 252.6, Division: "NL West"},
 	{ID: "ARI", Name: "Diamondbacks", City: "Phoenix", X: 331.4, Y: 438.4, Division: "NL West"},
-	{ID: "TEX", Name: "Rangers", City: "Arlington", X: 557.4, Y: 473.9, Division: "AL West"},
+	{ID: "TEX", Name: "Rangers", City: "Texas", X: 557.4, Y: 473.9, Division: "AL West"},
 	{ID: "HOU", Name: "Astros", City: "Houston", X: 642.6, Y: 576.8, Division: "AL West"},
 	{ID: "MIN", Name: "Twins", City: "Minneapolis", X: 628.4, Y: 163.9, Division: "AL Central"},
 	{ID: "MIL", Name: "Brewers", City: "Milwaukee", X: 779.9, Y: 201.7, Division: "NL Central"},
@@ -124,7 +124,7 @@ func main() {
 
 	// CORS middleware
 	config := cors.DefaultConfig()
-	config.AllowOrigins = []string{"http://localhost:3000", "http://localhost:5173"}
+	config.AllowOrigins = []string{"http://localhost:3001", "http://localhost:5173"}
 	config.AllowMethods = []string{"GET", "POST", "OPTIONS"}
 	router.Use(cors.New(config))
 
