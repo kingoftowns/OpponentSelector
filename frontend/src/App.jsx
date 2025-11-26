@@ -12,6 +12,7 @@ function App() {
   const [positionMode, setPositionMode] = useState(false)
   const [sessionId, setSessionId] = useState(null)
   const [gameComplete, setGameComplete] = useState(false)
+  const [sessionEnabled, setSessionEnabled] = useState(false)
 
   // Parse URL parameters on initial load
   useEffect(() => {
@@ -124,7 +125,7 @@ function App() {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          sessionId: sessionId || '',
+          sessionId: sessionEnabled ? (sessionId || '') : '',
           currentTeam: currentTeam.id,
           league: league,
         }),
@@ -132,8 +133,8 @@ function App() {
 
       const data = await response.json()
 
-      // Store session ID from backend
-      if (data.sessionId && !sessionId) {
+      // Store session ID from backend only if session is enabled
+      if (sessionEnabled && data.sessionId && !sessionId) {
         setSessionId(data.sessionId)
         localStorage.setItem('sessionId', data.sessionId)
       }
@@ -143,8 +144,8 @@ function App() {
         const newTeam = { ...data.targetTeam, league }
         setCurrentTeam(newTeam)
 
-        // Update game complete state from backend
-        if (data.gameComplete) {
+        // Update game complete state from backend only if session is enabled
+        if (sessionEnabled && data.gameComplete) {
           setGameComplete(true)
         }
 
@@ -236,9 +237,27 @@ function App() {
   return (
     <div className="app">
       <div className="header">
-        <button className="new-game-button" onClick={handleNewGame}>
-          New Game
-        </button>
+        <label className="session-toggle">
+          <input
+            type="checkbox"
+            checked={sessionEnabled}
+            onChange={(e) => {
+              const enabled = e.target.checked
+              setSessionEnabled(enabled)
+              if (!enabled) {
+                // Clear session when disabled
+                setSessionId(null)
+                setGameComplete(false)
+                localStorage.removeItem('sessionId')
+              } else {
+                // Start new session when enabled
+                handleNewGame()
+              }
+            }}
+            disabled={isSpinning}
+          />
+          <span>Track Visited Teams</span>
+        </label>
 
         <div className="league-toggle">
           <button
