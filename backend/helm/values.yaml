@@ -1,0 +1,20 @@
+namespace: us-map
+
+replicaCount: 1
+
+image:
+  repository: registry.k8s.blacktoaster.com/imperialism-backend
+  pullPolicy: Always
+  tag: "7967a72"
+
+service:
+  type: ClusterIP
+  port: 8080
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
