@@ -162,3 +162,40 @@
   transform: scale(1.1);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
 }
+
+/* Mobile responsive styles */
+@media (max-width: 768px) {
+  .header {
+    flex-direction: column;
+    gap: 10px;
+    padding: 10px 15px;
+    padding-top: max(10px, env(safe-area-inset-top));
+  }
+
+  .current-team-header {
+    position: static;
+    transform: none;
+    font-size: 1.4rem;
+    order: -1;
+  }
+
+  .session-toggle {
+    padding: 8px 12px;
+    font-size: 0.85rem;
+  }
+
+  .session-toggle input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+  }
+
+  .league-toggle button {
+    padding: 8px 20px;
+    font-size: 0.9rem;
+  }
+
+  .map-container {
+    padding: 5px;
+    padding-bottom: max(5px, env(safe-area-inset-bottom));
+  }
+}

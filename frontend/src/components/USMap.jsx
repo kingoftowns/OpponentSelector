@@ -2,12 +2,15 @@ import React, { useRef, useEffect, useState } from 'react'
 import { getTeamLogo } from '../utils/teamLogos'
 import './USMap.css'
 
+// Fixed coordinate system that matches the backend team positions
+const VIEWBOX_WIDTH = 1200
+const VIEWBOX_HEIGHT = 720
+
 const USMap = ({ teams, currentTeam, onTeamSelect, onSpin, isSpinning }) => {
   const [league, setLeague] = useState('mlb')
   const svgRef = useRef(null)
   const arrowRef = useRef(null)
   const spinningArrowRef = useRef(null)
-  const [dimensions, setDimensions] = useState({ width: 1000, height: 600 })
   const [spinData, setSpinData] = useState(null)
 
   // Detect league from current team
@@ -16,31 +19,6 @@ const USMap = ({ teams, currentTeam, onTeamSelect, onSpin, isSpinning }) => {
       setLeague(currentTeam.league)
     }
   }, [currentTeam])
-
-  useEffect(() => {
-    const handleResize = () => {
-      if (svgRef.current) {
-        const container = svgRef.current.parentElement
-        if (container) {
-          const rect = container.getBoundingClientRect()
-          // Use fixed aspect ratio to prevent jittering
-          const width = Math.min(rect.width, 1200)
-          const height = width * 0.6 // 5:3 aspect ratio
-          setDimensions({ width, height })
-        }
-      }
-    }
-
-    // Delay initial sizing to ensure DOM is ready
-    setTimeout(handleResize, 100)
-    window.addEventListener('resize', handleResize)
-    return () => window.removeEventListener('resize', handleResize)
-  }, [])
-
-  // Get viewBox that matches the map bounds aspect ratio better
-  const getViewBox = () => {
-    return `0 0 ${dimensions.width} ${dimensions.height}`
-  }
 
   const handleSpinClick = async () => {
     if (!currentTeam || isSpinning) return
@@ -79,7 +57,7 @@ const USMap = ({ teams, currentTeam, onTeamSelect, onSpin, isSpinning }) => {
 
   return (
     <div className="us-map-wrapper">
-      <svg ref={svgRef} className="us-map" viewBox={getViewBox()} preserveAspectRatio="xMidYMid meet">
+      <svg ref={svgRef} className="us-map" viewBox={`0 0 ${VIEWBOX_WIDTH} ${VIEWBOX_HEIGHT}`} preserveAspectRatio="xMidYMid meet">
         <defs>
           {/* Arrow marker */}
           <marker
@@ -95,15 +73,15 @@ const USMap = ({ teams, currentTeam, onTeamSelect, onSpin, isSpinning }) => {
         </defs>
 
         {/* Background */}
-        <rect width={dimensions.width} height={dimensions.height} fill="rgba(255, 255, 255, 0.05)" rx="10" />
+        <rect width={VIEWBOX_WIDTH} height={VIEWBOX_HEIGHT} fill="rgba(255, 255, 255, 0.05)" rx="10" />
 
         {/* US Map Image with team colors */}
         <image
           href={league === 'mlb' ? '/mlb-map.png' : '/nba-map.png'}
           x="0"
           y="0"
-          width={dimensions.width}
-          height={dimensions.height}
+          width={VIEWBOX_WIDTH}
+          height={VIEWBOX_HEIGHT}
           opacity="0.6"
           preserveAspectRatio="xMidYMid meet"
           className="map-outline-image"
