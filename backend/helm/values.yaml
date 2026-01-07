@@ -5,7 +5,7 @@ replicaCount: 1
 image:
   repository: registry.k8s.blacktoaster.com/imperialism-backend
   pullPolicy: Always
-  tag: "47cbb8a"
+  tag: "1d94a79"
 
 service:
   type: ClusterIP
