@@ -123,7 +123,9 @@ function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
         },
+        cache: 'no-store',
         body: JSON.stringify({
           sessionId: sessionEnabled ? (sessionId || '') : '',
           currentTeam: currentTeam.id,
