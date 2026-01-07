@@ -128,6 +128,14 @@ func main() {
 	config.AllowMethods = []string{"GET", "POST", "OPTIONS"}
 	router.Use(cors.New(config))
 
+	// Add no-cache headers for API responses
+	router.Use(func(c *gin.Context) {
+		c.Header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+		c.Header("Pragma", "no-cache")
+		c.Header("Expires", "0")
+		c.Next()
+	})
+
 	router.GET("/api/teams/:league", getTeams)
 	router.POST("/api/spin", spin)
 	router.POST("/api/session/new", newSession)
